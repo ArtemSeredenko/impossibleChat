@@ -9,7 +9,7 @@ type Message = {
 };
 
 const MAKE_WEBHOOK_URL =
-  "https://hook.eu2.make.com/3avlu7axojiz4ausryvj5sexnwhigvh6";
+  "https://hook.eu2.make.com/yxdv1j2vhrtfywjtflffwttqbh6fp8n9";
 
 function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
