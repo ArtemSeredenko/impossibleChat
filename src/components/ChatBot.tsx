@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import "./ChatBot.css";
+import "./ChatBot.css"; // важно: относительный импорт
 
 type Message = {
   id: string;
@@ -11,7 +11,7 @@ type Message = {
 const MAKE_WEBHOOK_URL =
   "https://hook.eu2.make.com/yxdv1j2vhrtfywjtflffwttqbh6fp8n9";
 
-function ChatBot() {
+  function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: crypto.randomUUID(),
@@ -24,12 +24,40 @@ function ChatBot() {
   const [sending, setSending] = useState<boolean>(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // автоскролл вниз при новых сообщениях
+  // автоскролл вниз
   useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  const safeText = (v: unknown) =>
+    typeof v === "string" ? v : v == null ? "" : String(v);
+
+  const fetchWithTimeout = async (url: string, opts: RequestInit, ms = 15000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, { ...opts, signal: controller.signal });
+    } finally {
+      clearTimeout(id);
+    }
+  };
+
+  const parseRelaxed = (raw: string) => {
+    // 1) пробуем JSON
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.reply === "string") return parsed.reply.trim();
+      // на всякий случай если структура другая
+      if (typeof (parsed?.content ?? parsed?.result) === "string")
+        return (parsed.content ?? parsed.result).trim();
+    } catch {
+      // 2) не JSON — вернём как текст
+    }
+    // 3) вырежем HTML (если кто-то случайно прислал)
+    const tmp = document.createElement("div");
+    tmp.innerHTML = raw;
+    return (tmp.textContent || tmp.innerText || "").trim();
+  };
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -41,41 +69,48 @@ function ChatBot() {
       text,
       ts: Date.now(),
     };
-
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setSending(true);
 
     try {
-      const res = await fetch(MAKE_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // при желании добавь userId/sessionId в payload
-        body: JSON.stringify({ message: text }),
-      });
+      const res = await fetchWithTimeout(
+        MAKE_WEBHOOK_URL,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        },
+        20000 // 20s таймаут на всякий
+      );
 
-      const data: { reply?: string } = await res.json().catch(() => ({}));
-      const replyText =
-        (typeof data?.reply === "string" && data.reply.trim()) ||
-        (res.ok
-          ? "Я почув(ла) тебе, але щось пішло не так із відповіддю 🤔"
-          : `Сервер відповів помилкою ${res.status}`);
+      const raw = await res.text(); // читаем как текст всегда
+      let reply = parseRelaxed(raw);
+
+      if (!reply) {
+        reply = res.ok
+          ? "Я почув(ла) тебе, але відповідь виглядає порожньою 🤔"
+          : `Сервер відповів помилкою ${res.status}`;
+      }
 
       const botMsg: Message = {
         id: crypto.randomUUID(),
         from: "bot",
-        text: replyText,
+        text: safeText(reply),
         ts: Date.now(),
       };
-
       setMessages((prev) => [...prev, botMsg]);
-    } catch {
+    } catch (err: any) {
+      const reason =
+        err?.name === "AbortError"
+          ? "⏱️ Таймаут з'єднання. Спробуй ще раз."
+          : "⚠️ Нема зв'язку з ботом. Перевір Make або мережу.";
       setMessages((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           from: "bot",
-          text: "⚠️ Нема зв'язку з ботом. Перевір Make або мережу.",
+          text: reason,
           ts: Date.now(),
         },
       ]);
