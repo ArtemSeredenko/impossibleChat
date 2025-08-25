@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import "/ChatBot.css";
+import "./ChatBot.css";
 
 type Message = {
   id: string;
