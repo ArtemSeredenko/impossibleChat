@@ -1,6 +1,28 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./ChatBot.css"; // важно: относительный импорт
 
+
+// 1) стабильный sessionId в localStorage
+const SESSION_KEY = "chat_session_id";
+function getSessionId(): string {
+  try {
+    let id = localStorage.getItem(SESSION_KEY);
+    if (!id) {
+      // fallback, если вдруг нет crypto.randomUUID
+      const gen =
+        (crypto as any)?.randomUUID?.() ??
+        `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      id = gen;
+      localStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    // на всякий случай — если localStorage недоступен
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+
 type Message = {
   id: string;
   from: "user" | "bot";
@@ -75,14 +97,22 @@ const MAKE_WEBHOOK_URL =
 
     try {
       const res = await fetchWithTimeout(
-        MAKE_WEBHOOK_URL,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text }),
-        },
-        20000 // 20s таймаут на всякий
-      );
+  MAKE_WEBHOOK_URL,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: text,
+      sessionId: getSessionId(), // ← вот этот helper мы вынесли наверх файла
+      meta: {
+        page: location.pathname,
+        ua: navigator.userAgent
+      }
+    }),
+  },
+  20000
+);
+
 
       const raw = await res.text(); // читаем как текст всегда
       let reply = parseRelaxed(raw);
