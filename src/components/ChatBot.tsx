@@ -6,21 +6,21 @@ import "./ChatBot.css"; // важно: относительный импорт
 const SESSION_KEY = "chat_session_id";
 function getSessionId(): string {
   try {
-    let id = localStorage.getItem(SESSION_KEY);
-    if (!id) {
-      // fallback, если вдруг нет crypto.randomUUID
-      const gen =
+    let id: string | null = localStorage.getItem(SESSION_KEY);
+    if (id == null || id === "") {
+      const newId =
         (crypto as any)?.randomUUID?.() ??
         `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-      id = gen;
-      localStorage.setItem(SESSION_KEY, id);
+      localStorage.setItem(SESSION_KEY, newId);
+      return newId;
     }
-    return id;
+    return id; // здесь уже точно string
   } catch {
-    // на всякий случай — если localStorage недоступен
+    // fallback если localStorage недоступен (редко, но бывает)
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 }
+
 
 
 type Message = {
