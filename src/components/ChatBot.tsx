@@ -30,7 +30,7 @@ const MAKE_WEBHOOK_URL =
   "https://hook.eu2.make.com/9woeodiordj6x9fj7wiv799jpolqcy55";
 
 // !!! Задай любой секрет и добавь проверку в Make (headers.x-webhook-token)
-const MAKE_WEBHOOK_SECRET = "replace_me_with_strong_secret_token";
+const MAKE_WEBHOOK_SECRET = "snugens_2025";
 
 // --- utils ---
 
