@@ -27,7 +27,7 @@ type Message = {
 };
 
 const MAKE_WEBHOOK_URL =
-  "https://hook.eu2.make.com/wn3hlh6fj2p91zf3au0mrkrjbzs8lccu";
+  "https://hook.eu2.make.com/9woeodiordj6x9fj7wiv799jpolqcy55";
 
 // !!! Задай любой секрет и добавь проверку в Make (headers.x-webhook-token)
 const MAKE_WEBHOOK_SECRET = "replace_me_with_strong_secret_token";
